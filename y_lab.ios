@@ -129,3 +129,200 @@ agile controller host 172.22.8.72 port 10020
          GE0/0/9
           目的网段/掩码： 0.0.0.0/0
    Site_Store1
+    WAN路由
+      点击添加路由协议
+        IPv4 Static
+         GE0/0/10
+          目的网段/掩码： 0.0.0.0/0
+         GE0/0/9
+          目的网段/掩码： 0.0.0.0/0
+
+#多分支互联
+  ##站点间组网
+   勾上Site_Store1
+    连接
+  
+  //验证bgp evpn|dis bgp evpn peer 
+
+#多分支互联
+ #互联配置
+  Y_OA_To_Sites
+   IPSec加密 ok
+   全部移过去
+  Y_RD_To_Sites
+   IPSec加密 ok
+   全部移过去
+
+  Guest_To_Internet
+   IPSec加密 no
+   全部移过去
+
+  Management
+   IPSec加密 no
+   移Site_Y
+
+   点击VN Management
+    WAN业务
+     Full Mesh
+     点击添加站点
+      移下去
+    LAN-WAN互联
+     站点：Site_Y
+      高级模式
+       Y_Export1
+        网关接口：L3
+        接口：GE0/0/1
+        IP：10.2.1.1/24
+        配置（点）
+         //去CLI Y_Core1 记录dis int vlan 1 的mac 地址： f033-e57f-8cd2
+         DHCP Enable 
+         选项：创建
+          148 云平台地址
+          //改mode ip 改domain ip 地址
+           agilemode=agile-cloud;agilemanage-mode=ip;agilemanage-domain=172.22.8.72;agilemanage-port=10020；
+        静态绑定
+         创建
+          ip: 10.2.1.2 
+          mac： f033-e57f-8cd2
+      
+      点击创建路由协议
+       Static
+       创建
+        目的网段/掩码：10.2.0.0/24
+        IP 地址： 10.2.1.2 
+
+#多分支互联
+ #流量策略
+  VN Management
+    站点上网
+     本地上网
+      新建
+       移全部
+        下一步
+         GE0/0/9 操作
+          NAT 开启
+
+//CLI Netconf 所有设备让设备被纳管
+//netconf
+//management-vlan 1
+
+#多分支互联
+ #互联配置
+  Y_OA_To_Sites
+   WAN业务
+    简单模式
+    Hub-Spoke
+     分支互访
+     中心站点
+      添加
+       Site_Y 分支互通
+     分支站点
+      添加
+       Site_Store1
+  LAN-WAN互联
+   站点：Site_Store1
+    高级模式
+    网关：Store1_Export1
+    网关接口：L2
+    Vlan id: 2
+    接口： GE0/0/1 Tag
+    IP地址： 10.100.2.1/24
+   站点：Site_Y
+    高级模式
+    网关：Y_Export1
+    网关接口：L3
+    接口： GE0/0/1 
+    子接口：enable
+    Vlan id: 121
+    IP地址： 10.2.200.2/30
+
+    点击创建路由协议
+     OSPF
+     创建
+      进程：2
+      创建
+      区域ID: 0 接口名称：GE0/0/1.121 验证模式：none
+
+#多分支互联
+ #流量策略
+ VN Y_OA_To_Sites
+  站点上网
+   集中上网
+    新建
+     区域：ALL 主网关：Site_Y 操作：打勾
+   本地上网
+    新建
+     Site_Y
+      下一步
+       操作 打开两个接口的NAT
+
+
+#多分支互联
+ #互联配置
+  Y_RD_To_Sites
+   WAN业务
+    简单模式
+    Hub-Spoke
+     分支互访
+     中心站点
+      添加
+       Site_Y 分支互通
+     分支站点
+      添加
+       Site_Store1
+  LAN-WAN互联
+   站点：Site_Store1
+    高级模式
+    网关：Store1_Export1
+    网关接口：L2
+    Vlan id: 3
+    接口： GE0/0/1 Tag
+    IP地址： 10.100.3.1/24
+   站点：Site_Y
+    高级模式
+    网关：Y_Export1
+    网关接口：L3
+    接口： GE0/0/1 
+    子接口：enable
+    Vlan id: 122
+    IP地址： 10.2.200.6/30
+
+    点击创建路由协议
+     OSPF
+     创建
+      进程：3
+      创建
+      区域ID: 0 接口名称：GE0/0/1.122 验证模式：none
+
+
+#iMaster NCE-Campus
+ #策略
+  SAC配置
+   应用识别 开启
+   FPI 开启
+  自定义应用
+   新建
+    应用名：Order
+    新建
+     名称：Order
+     TCP
+     端口：8888
+  应用组
+   新建
+    名称：Order
+    添加自定义应用
+     全部添加进去
+
+#iMaster NCE-Campus
+ #监控
+  监控设置
+   Site_Y
+    HTTP 路由器
+     选项全选
+   Site_Store1
+    HTTP 路由器
+     选项全选
+
+#iMaster NCE-Campus
+ #策略
+   流量策略
