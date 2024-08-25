@@ -1,0 +1,131 @@
+
+user01
+Huawei@123
+
+user010
+Huawei@456
+Huawei@123
+
+//设计 ——> 网络设置
+//隧道模式 ——> EVPN
+
+#多分支互联
+  ##全局配置
+    ### 物理网络
+      关闭 ——> 加密使能 （设备激活安全配置）
+
+    ### 虚拟网络
+      AS 65003
+
+      IPv4 地址池
+      10.99.0.0/16
+
+
+  ##站点设计
+    Site_Y
+      AR LSW WAC
+    
+    Site_Store1
+      AR
+
+  ##设备管理
+    NETCONF
+     批量导入
+       导入模板
+  ##WAN 链路模板
+    模板名：HCIE
+     GE0/0/10   GE0/0/10 Internet 1 
+     GE0/0/9    GE0/0/9  Internet 1 高级参数 Public
+  
+## 登录设备进行CLI 开局
+admin
+admin@huawei.com
+Huawei@123
+Huawei@456
+
+//Y_Export1 练习配置
+interface G0/0/2
+ undo portswitch
+ ip add 10.255.5.1 24
+
+interface G0/0/3
+ undo portswitch
+ ip add 10.255.6.1 24
+ 
+ip route-s 0.0.0.0 0 10.255.5.254
+ip route-s 0.0.0.0 0 10.255.6.254
+
+agile controller host 172.22.8.72 port 10020
+
+//Store_Export1 练习配置
+interface G0/0/2
+ ip add 10.255.7.1 24
+
+interface G0/0/3
+ ip add 10.255.8.1 24
+ 
+ip route-s 0.0.0.0 0 10.255.7.254
+ip route-s 0.0.0.0 0 10.255.8.254
+
+agile controller host 172.22.8.72 port 10020
+
+
+#多分支互联
+  ##设备管理
+   Check 两台 Export 上线了
+  
+  ##零配置开局
+
+   Site_Store1
+    点击开局
+      DHCP Option
+        模板导入
+          HCIE
+           GE0/0/9 -->操作
+             接口 GE0/0/9 (练习GE0/0/2)
+             IPv4 10.255.7.1
+             掩码 24
+             IPv4 网关 10.255.7.254
+             Upload:   1000
+             Download: 1000
+
+           GE0/0/10 -->操作
+             接口 GE0/0/10 (练习GE0/0/3)
+             IPv4 10.255.8.1
+             掩码 24
+             IPv4 网关 10.255.8.254
+             Upload:   1000
+             Download: 1000 
+   
+   Site_Y
+    点击开局
+      DHCP Option
+        模板导入
+          HCIE
+           GE0/0/9 -->操作
+             接口 GE0/0/9 (练习GE0/0/2)
+             IPv4 10.255.5.1
+             掩码 24
+             IPv4 网关 10.255.5.254
+             Upload:   1000
+             Download: 1000
+
+           GE0/0/10 -->操作
+             接口 GE0/0/10 (练习GE0/0/3)
+             IPv4 10.255.6.1
+             掩码 24
+             IPv4 网关 10.255.6.254
+             Upload:   1000
+             Download: 1000 
+             
+#多分支互联
+  ##WAN Underlay
+   Site_Y
+    WAN路由
+      点击添加路由协议
+        IPv4 Static
+         GE0/0/10
+          目的网段/掩码： 0.0.0.0/0
+         GE0/0/9
+          目的网段/掩码： 0.0.0.0/0
+   Site_Store1
