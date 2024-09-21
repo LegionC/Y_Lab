@@ -35,7 +35,7 @@ Huawei@123
   ##WAN 链路模板
     模板名：HCIE
      GE0/0/10   GE0/0/10 Internet 1 
-     GE0/0/9    GE0/0/9  Internet 1 高级参数 Public
+     GE0/0/9    GE0/0/9  Internet  高级参数 Public
   
 ## 登录设备进行CLI 开局
 admin
@@ -325,4 +325,496 @@ agile controller host 172.22.8.72 port 10020
 
 #iMaster NCE-Campus
  #策略
-   流量策略
+   流量策略 Y_OA_To_Sites\
+   策略模板管理
+    新建
+     流分类名称: Order
+     应用组
+      全部 选过去
+   流量策略 Y_RD_To_Sites
+    智能选路 - 新建
+     策略名称：p1
+     策略模板：order
+     优先级：1
+     切换指标
+      低时延数据   
+     传输网络优先级
+      主网络传输
+       优先级： 1 Internet 1
+       优先级： 2 Internet 
+   
+    策略配置 ————> p1
+     关联站点
+      全部选中
+    
+    提交 --> 全部提交
+
+#多分支互联
+ #互联配置 Guest_To_Internet
+  FULL Mesh 
+   分支站点 --> 添加站点
+    全部添加进去
+  
+  LAN-WAN互联
+   VN: Site_Store1
+    高级模式 Store_Export1
+     接口网关：L2
+     VLAN ID： 4
+     物理接口：GE0/0/1 Tag
+     IP地址：10.100.4.1/24
+   VN: Site_Y 
+     高级模式 Store_Export1
+     接口网关：L3
+     接口：GE0/0/1
+     子接口：enable
+     VLAN ID： 123
+     IP地址： 10.2.200.10/30
+
+     点击添加10条静态路由协议
+     10.2.101.0/24 
+     10.2.102.0/24 
+     10.2.103.0/24 
+     10.2.104.0/24 
+     10.2.105.0/24 
+     10.2.106.0/24 
+     10.2.107.0/24 
+     10.2.108.0/24 
+     10.2.109.0/24 
+     10.2.110.0/24
+     吓一跳地址： 10.2.200.9
+
+#多分支互联
+ #流量策略 VN Guest_To_Internet
+  站点上网  
+   本地上网-新建
+    全选下来
+     打开所有的NAT
+      G0/0/10 优先级：2
+
+
+#iMaster NCE-Campus
+ #配置 站点配置 Site_Y
+  除了Core 设备其他的都选中
+   修改
+    管理VLAN: 自定义
+    管理VLAN ID: 3996
+   
+  #交换机 - 子网
+   创建
+    设备： Y_Core1
+    子网名称：PNP
+    VLAN ID: 3996
+    IP/掩码：10.2.0.1/24
+    DHCP: Enable
+    管理网络：Enable
+    自动协商控制器地址： Enable
+    自动协商WAC地址：Enable
+    WAC 地址： 10.2.0.1 
+  #交换机 - 接口
+   
+   Y_Core1
+    1口 2口 
+    Trunk: 3996
+   Y_AGG2
+    1口
+    Trunk: 3996
+   Y_AGG1
+    1口
+    Trunk: 3996
+   Y_ACC1: 
+    23口
+    Access: 3996
+  
+//CLI Y_Core1
+
+capwap source interface vlanif 3996
+
+
+#多分支互联
+ #流量策略 
+  # Underlay
+   NAT
+    Site_Y
+     静态NAT - 新建
+      策略名称：nat_server
+      设备：Y_Export1
+      接口名称：GE0/0/2
+      内部IP: 10.2.1.2
+      协议类型：UDP
+      外部端口：2000
+      内部端口：2000
+       确认
+
+#iMaster NCE-Campus
+ #Fabric 网络
+  Fabric 全局资源池
+   VLAN 全是 11 - 150 
+  Underlay自动化资源池
+   互联VLAN: 4000-4094
+   互联IP： 10.2.254.0-10.2.254.0/24
+   环回口IP: 10.2.255.0-10.2.255.0/24
+  Radius服务器 - 创建
+   名称：radius_server
+   使用内置服务器：enable
+   认证组件： 选择 --> 内置认证服务
+   密钥：Huawei@123
+  Portal服务器 - 创建
+   名称：portal_server
+   使用内置服务器：enable
+   密钥：Huawei@123
+  认证模板 - 创建
+   名称：dot1x_mac
+   认证方式：MAC,802.1x
+   旁路认证: Enable
+   radius服务器模板：radius_server
+   已阅读
+    确认
+  
+#iMaster NCE-Campus
+ #Fabric 网络 
+  #Fabric 网络 - 创建 Site_Y
+   名称：Site_Y
+   组网类型：集中式网关
+   无线WAC位置： 边界网关节点
+   自动配置路由域：Enable
+   AS: 65002
+    应用
+  
+  添加设备
+   全部放过去
+    Y_ACC1 拓展节点
+    Y_ACC2 拓展节点
+    Y_AGG1 边缘节点
+    Y_AGG2 边缘节点
+    Y_Core: 边界网关节点 路由反射器：enable
+     下一步
+      配置开关：enable
+       加密：无
+        应用
+  #Fabric 网络 - Site_Y
+   网络服务资源 - 创建
+    名称：DHCP
+    服务类型：DHCP
+    DHCP 服务器： 10.2.200.14
+     下一步
+      网关节点 -  交换机
+      互联设备：Y_Core1
+      互联端口：G0/0/23
+      互联vlan 120
+      互联ipv4: 10.2.200.13 对端IP: 10.2.200.14 掩码：30
+        完成
+   外部网络 - 创建 
+    L3 独占出口
+     名称：OA 
+     VLANFI 动态路由 
+      下一步
+       核心设备：Y_Core1
+       增加： 
+        名称：vlan121
+        Y_Core1端口：G0/0/24
+        vlan： 121
+        本段地址：10.2.200.1
+        对端地址：10.2.200.2
+        掩码：30
+         确认
+          下一步
+           OSPF - 创建
+            进程：2
+            引入静态路由：disable
+            引入直连路由：enable
+             确定
+              创建
+               区域ID: 0
+               认证类型：无
+               邻居接口：vlan121
+                确认
+              应用
+
+  外部网络 - 创建 
+    L3 独占出口
+     名称：RD 
+     VLANFI 动态路由 
+      下一步
+       核心设备：Y_Core1
+       增加： 
+        名称：vlan122
+        Y_Core1端口：G0/0/24
+        vlan： 122
+        本段地址：10.2.200.5
+        对端地址：10.2.200.6
+        掩码：30
+         确认
+          下一步
+           OSPF - 创建
+            进程：3
+            引入静态路由：disable
+            引入直连路由：enable
+             确定
+              创建
+               区域ID: 0
+               认证类型：无
+               邻居接口：vlan122
+                确认
+              应用
+
+  外部网络 - 创建 
+    L3 独占出口
+     名称：Guest
+     VLANFI 静态路由
+     连接到Internet:Enable
+      下一步
+       核心设备：Y_Core1
+       增加： 
+        名称：vlan123
+        Y_Core1端口：G0/0/24
+        vlan： 123
+        本段地址：10.2.200.9
+        对端地址：10.2.200.10
+        掩码：30
+         确认
+              应用
+
+#iMaster NCE-Campus
+ #Fabric 网络 
+  #逻辑网络 - VLAN池管理
+   创建6个地址池
+    R&D
+    Employee
+    Finance
+    Guest 
+    Marketing
+    Production
+
+  创建 - 名称：RD 
+   名称：RD
+   自定义VRP: RD_001
+   网络服务器资源：DHCP
+   外部网络：RD
+    下一步
+     自动分配
+      子网数目：5 （练习的时候写1）
+      IP起始值：10.2.11.0
+      VLAN池名称：R&D
+      VLAN起始值：11
+      DHCP: DHCP relay
+       确认
+     自动分配
+      子网数目：5 （练习的时候写1）
+      IP起始值：10.2.21.0
+      VLAN池名称：Prouction
+      VLAN起始值：21
+      DHCP: DHCP relay
+       确认
+ 
+  创建 - 名称：OA
+   名称：OA 
+   自定义VRP: OA_001
+   网络服务器资源：DHCP
+   外部网络：OA
+    下一步
+     自动分配
+      子网数目：5 （练习的时候写1）
+      IP起始值：10.2.31.0
+      VLAN池名称：Marketing
+      VLAN起始值：31
+      DHCP: DHCP relay
+       确认
+     自动分配
+      子网数目：5 （练习的时候写1）
+      IP起始值：10.2.41.0
+      VLAN池名称：Finance
+      VLAN起始值：41
+      DHCP: DHCP relay
+       确认
+     自动分配
+      子网数目：5 （练习的时候写1）
+      IP起始值：10.2.51.0
+      VLAN池名称：Employee
+      VLAN起始值：51
+      DHCP: DHCP relay
+       确认
+
+  创建 - 名称：Guest
+   名称：Guest
+   自定义VRP: Guest_001
+   网络服务器资源：DHCP
+   外部网络：Guest
+    下一步
+     自动分配
+      子网数目：10 （练习的时候写1）
+      IP起始值：10.2.101.0
+      VLAN池名称：Guest
+      VLAN起始值：101
+      DHCP: DHCP relay
+       确认
+
+#iMaster NCE-Campus
+ #Fabric 网络 
+  #业务部署 - 安全组/资源组
+   安全组 - 创建
+    名称：Employee_RD1
+     确定
+    名称：Employee_RD2
+     确定
+    名称：Employee_OA1
+     确认
+    名称：Guest
+     确认
+  资源组 - 创建
+   名称：Service_RD1
+   IP： 10.3.99.0/24
+    确认
+   名称：Service_RD2
+   IP： 10.3.99.0/24
+    确认
+   名称：Service_Common
+   IP： 10.3.99.0/24
+    确认
+  #业务部署 - 策略控制
+   新增
+    矩阵名称：p1
+     增加： 
+      Y_AGG1
+      Y_AGG2
+      Y_Core1 
+       确认
+
+
+#iMaster NCE-Campus
+ #Fabric 网络 
+  #Fabric 网络 - 接入管理
+   认证控制点：Y_AGG1
+   执行点设备数量：126
+   策略联动管理VLAN: 124
+   策略联动管理IP： 10.2.251.1/24
+
+   G0/0/1 Fabric扩展接入交换机 dot1x_mac 
+
+   Y_ACC1 
+    G0/0/1 - G0/0/20 终端 继承认证控制点认证模板
+     应用
+
+   认证控制点：Y_AGG2
+   执行点设备数量：126
+   策略联动管理VLAN: 124
+   策略联动管理IP： 10.2.250.1/24
+
+   G0/0/1 Fabric扩展接入交换机 dot1x_mac 
+
+   Y_ACC2 
+    G0/0/1 - G0/0/20 终端 继承认证控制点认证模板
+     应用
+  
+  
+  无线接入配置
+   跳转 - Site_Y
+    管理Fit AP - Y_Core1
+    认证 - 无线认证 - 创建 
+      名称： Wireless_Employee010
+      SSID: Wireless_Employee010
+      Portal 协议类型：HACA
+      推送页面：默认用户名密码
+      用户自注册：disable
+      我已阅读
+
+      选择设备
+       增加 - Y_Core1
+        确认
+
+    认证 - 无线认证 - 创建 
+      名称： Wireless_Guest010
+      SSID: Wireless_Guest010
+      Portal 协议类型：HACA
+      推送页面：默认用户名密码
+      用户自注册：disable
+      我已阅读
+
+      选择设备
+       增加 - Y_Core1
+        确认
+
+#iMaster NCE-Campus
+ #Fabric 网络 
+  #逻辑网络 - OA 修改
+   有线接入：点大大的加号括号
+    名称：LAN 
+    增加： 
+     Y_ACC1
+     Y_ACC2
+      确定
+     Y_ACC1 & Y_ACC2 
+      勾选G0/0/1 - G0/0/2 
+       业务Vlan 动态VLAN
+  无线接入 增加 
+   Y_Core1
+    应用
+  #逻辑网络 - RD
+   配置有线
+  #逻辑网络 - Guest 
+   配置无线 
+
+  
+#iMaster NCE-Campus
+ #Fabric 网络 
+  # 业务部署 - 用户管理
+   Root下 增加+ 按钮点一下
+    用户组名称：R&D
+     R&D - 创建
+      用户名：rd1
+      密码：Huawei@123
+      下次登陆修改密码：diable
+       确定
+//有五个用户组 Production Marketing Employee Guest R&DHCP
+  # 业务部署 - 认证规则
+   修改
+    认证协议全部勾选
+     确认
+  # 业务部署 - 授权结果 - 创建 
+     名称：RD
+     安全组：Employee_RD2
+     VLAN: R&D
+      确认
+     增加 
+      Site-Y
+       确认
+  # 业务部署 - 授权规则 - 创建 
+     名称：RD
+     用户接入认证
+     接入方式：有线
+     用户组信息匹配：Enable
+      用户组：Root\R&D
+     站点信息匹配：Enable
+      选择：Site_Y
+     授权结果： RD 
+      确认
+     
+     名称：EMP
+     用户接入认证
+     接入方式：无线
+     用户组信息匹配：Enable
+      用户组：Root\Employee
+     站点信息匹配：Enable
+      选择：Site_Y
+     SSID 匹配：enable
+      Wireless_Employee010
+     授权结果： EMP 
+      确认
+
+
+#iMaster NCE-Campus
+ #Fabric 网络 
+  #逻辑网络 - VN互通 - 增加
+   名称: OA_RD
+   OA -- RD
+
+   名称: OA_Guest
+   OA -- Guest
+
+   名称：RD_Guest
+   RD -- Guest
+
+#iMaster NCE-Campus
+ #设计 - 设备管理 - Y_Core1
+  #设备配置
+  //跳转到别的网页
+  
